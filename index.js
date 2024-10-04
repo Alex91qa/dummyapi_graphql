@@ -15,8 +15,13 @@ const resolvers = {
   },
 };
 
-// Создание сервера Apollo
-const server = new ApolloServer({ typeDefs, resolvers });
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  persistedQueries: {
+    cache: "bounded" // Ограниченное кэширование для безопасности
+  }
+});
 
 // Создание приложения Express
 const app = express();
