@@ -1,35 +1,25 @@
+// index.js
+const { ApolloServer } = require('apollo-server-express');
 const express = require('express');
-const { ApolloServer, gql } = require('apollo-server-express');
+const { typeDefs } = require('./schema');
+const { resolvers } = require('./resolvers');
+const jwt = require('jsonwebtoken');
 
-// Определение схемы GraphQL
-const typeDefs = gql`
-  type Query {
-    hello: String
-  }
-`;
-
-// Определение резолверов
-const resolvers = {
-  Query: {
-    hello: () => 'Hello world!',
-  },
-};
+const app = express();
 
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  persistedQueries: {
-    cache: "bounded" // Ограниченное кэширование для безопасности
-  }
+  context: ({ req }) => {
+    const token = req.headers.authorization || '';
+    return { token };
+  },
 });
 
-// Создание приложения Express
-const app = express();
 server.start().then(res => {
   server.applyMiddleware({ app });
 
-  // Запуск сервера
-  app.listen({ port: process.env.PORT || 4000 }, () =>
+  app.listen({ port: 4000 }, () =>
     console.log(`🚀 Server ready at http://localhost:4000${server.graphqlPath}`)
   );
 });
