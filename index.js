@@ -13,18 +13,25 @@ const startServer = async () => {
     typeDefs,
     resolvers,
     context: ({ req }) => {
-      // Извлечение токена из заголовков
-      const token = req.headers.authorization || '';
+      // Извлечение заголовка Authorization
+      const authHeader = req.headers.authorization || '';
+      
+      // Проверка на наличие токена и его префикса
+      if (!authHeader.startsWith('Bearer ')) {
+        throw new Error('No authorization token provided');
+      }
+      
+      const token = authHeader.split(' ')[1]; // Убираем префикс Bearer
       try {
-        // Верификация JWT токена, если необходимо
+        // Верификация JWT токена
         const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
         return { user };
       } catch (err) {
-        console.log('Не удалось верифицировать токен:', err);
-        return { user: null };
+        console.log('Ошибка верификации токена:', err);
+        throw new Error('Invalid/Expired token');
       }
     },
-    cache: "bounded", // Рекомендация Apollo для защиты от атак
+    cache: "bounded", // Защита от атак
   });
 
   await server.start();
