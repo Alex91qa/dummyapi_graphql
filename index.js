@@ -1,5 +1,4 @@
-// index.js
-const { ApolloServer } = require('apollo-server-express');
+const { ApolloServer, AuthenticationError } = require('apollo-server-express');
 const express = require('express');
 const typeDefs = require('./schema');
 const resolvers = require('./resolvers');
@@ -23,18 +22,18 @@ const startServer = async () => {
 
       if (!authHeader.startsWith('Bearer ')) {
         console.error('Токен отсутствует или некорректен');
-        throw new Error('No authorization token provided');
+        throw new AuthenticationError('No authorization token provided');
       }
       
       const token = authHeader.split(' ')[1];
       try {
-        // Верификация JWT токена
-        const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+        // Верификация JWT токена с использованием секретного ключа из переменной окружения
+        const user = jwt.verify(token, process.env.JWT_SECRET || 'defaultSecret');
         console.log('Пользователь верифицирован:', user);
         return { user };
       } catch (err) {
         console.error('Ошибка верификации токена:', err);
-        throw new Error('Invalid/Expired token');
+        throw new AuthenticationError('Invalid/Expired token');
       }
     },
     cache: "bounded", // Защита от атак

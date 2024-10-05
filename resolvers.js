@@ -1,4 +1,3 @@
-// resolvers.js
 const { MongoClient } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const { ApolloError, AuthenticationError } = require('apollo-server-express');
@@ -7,16 +6,10 @@ const client = new MongoClient(process.env.MONGODB_URI);
 
 const resolvers = {
   Mutation: {
-    createUser: async (_, { name, email, age, phoneNumber, address, role, referralCode }, { token }) => {
-      if (!token) {
+    createUser: async (_, { name, email, age, phoneNumber, address, role, referralCode }, { user }) => {
+      // Проверка на наличие пользователя в контексте
+      if (!user) {
         throw new AuthenticationError('No authorization token provided');
-      }
-
-      let decoded;
-      try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-      } catch (error) {
-        throw new AuthenticationError('Invalid or expired token');
       }
 
       await client.connect();
@@ -62,7 +55,19 @@ const resolvers = {
         role: role || 'user',
         referralCode: referralCode || null,
         createdAt: new Date(),
-        createdBy: decoded.userId, // данные о создателе
+        createdBy: user.userId, // данные о создателе
+        status: 'created',
+      });
+
+      console.log('Пользователь создан:', {
+        id: result.insertedId.toString(),
+        name,
+        email,
+        age,
+        phoneNumber,
+        address,
+        role: role || 'user',
+        referralCode: referralCode || null,
         status: 'created',
       });
 
