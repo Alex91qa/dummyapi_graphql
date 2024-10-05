@@ -13,21 +13,27 @@ const startServer = async () => {
     typeDefs,
     resolvers,
     context: ({ req }) => {
-      // Извлечение заголовка Authorization
+      // Логирование всех заголовков запроса для отладки
+      console.log('Request Headers:', req.headers);
+
       const authHeader = req.headers.authorization || '';
       
-      // Проверка на наличие токена и его префикса
+      // Логирование заголовка Authorization
+      console.log('Authorization Header:', authHeader);
+
       if (!authHeader.startsWith('Bearer ')) {
+        console.error('Токен отсутствует или некорректен');
         throw new Error('No authorization token provided');
       }
       
-      const token = authHeader.split(' ')[1]; // Убираем префикс Bearer
+      const token = authHeader.split(' ')[1];
       try {
         // Верификация JWT токена
         const user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+        console.log('Пользователь верифицирован:', user);
         return { user };
       } catch (err) {
-        console.log('Ошибка верификации токена:', err);
+        console.error('Ошибка верификации токена:', err);
         throw new Error('Invalid/Expired token');
       }
     },
