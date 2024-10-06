@@ -12,6 +12,7 @@ const typeDefs = gql`
     referralCode: String
     createdAt: String
     createdBy: String
+    status: String  # Добавляем поле status
   }
 
   type Query {
