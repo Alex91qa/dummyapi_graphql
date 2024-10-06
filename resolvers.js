@@ -7,7 +7,48 @@ const client = new MongoClient(process.env.MONGODB_URI);
 const resolvers = {
   Query: {
     getUser: async (_, { id }, { token }) => {
-      // Ваша существующая логика для getUser...
+      console.log("Received request for user ID:", id); // Логируем запрашиваемый ID пользователя
+
+      // Проверка на наличие токена
+      if (!token) {
+        throw new AuthenticationError('No authorization token provided');
+      }
+
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log("Decoded Token:", decoded); // Логируем декодированный токен
+      } catch (error) {
+        throw new AuthenticationError('Invalid or expired token');
+      }
+
+      await client.connect();
+      console.log("Connected to MongoDB"); // Логируем подключение к БД
+      const db = client.db(process.env.DB_NAME);
+      const usersCollection = db.collection('users');
+
+      let objectId;
+      try {
+        objectId = new ObjectId(id);
+      } catch (e) {
+        throw new ApolloError('Invalid User ID format', 'INVALID_ID');
+      }
+
+      try {
+        const user = await usersCollection.findOne({ _id: objectId });
+        console.log("Fetched User:", user); // Логируем найденного пользователя
+
+        if (!user) {
+          throw new ApolloError('User not found', 'USER_NOT_FOUND');
+        }
+
+        return user;
+      } catch (error) {
+        console.error('Error fetching user:', error); // Логируем ошибку при получении пользователя
+        throw new ApolloError('Failed to fetch user', 'FETCH_USER_FAILED');
+      } finally {
+        await client.close(); // Закрываем подключение к БД
+      }
     },
   },
   Mutation: {
