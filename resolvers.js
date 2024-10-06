@@ -6,16 +6,10 @@ const client = new MongoClient(process.env.MONGODB_URI);
 
 const resolvers = {
   Query: {
-    getUser: async (_, { id }, { token }) => {
-      if (!token) {
+    getUser: async (_, { id }, { user }) => {
+      // Проверка на наличие пользователя в контексте
+      if (!user) {
         throw new AuthenticationError('No authorization token provided');
-      }
-
-      let decoded;
-      try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-      } catch (error) {
-        throw new AuthenticationError('Invalid or expired token');
       }
 
       await client.connect();
@@ -29,39 +23,33 @@ const resolvers = {
         throw new ApolloError('Invalid User ID format', 'INVALID_ID');
       }
 
-      const user = await usersCollection.findOne({ _id: objectId });
+      const foundUser = await usersCollection.findOne({ _id: objectId });
 
-      if (!user) {
+      if (!foundUser) {
         throw new ApolloError('User not found', 'USER_NOT_FOUND');
       }
 
       await client.close();
 
       return {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        age: user.age,
-        phoneNumber: user.phoneNumber,
-        address: user.address,
-        role: user.role,
-        referralCode: user.referralCode,
-        createdAt: user.createdAt,
-        createdBy: user.createdBy,
+        id: foundUser._id.toString(),
+        name: foundUser.name,
+        email: foundUser.email,
+        age: foundUser.age,
+        phoneNumber: foundUser.phoneNumber,
+        address: foundUser.address,
+        role: foundUser.role,
+        referralCode: foundUser.referralCode,
+        createdAt: foundUser.createdAt,
+        createdBy: foundUser.createdBy,
       };
     },
   },
   Mutation: {
-    createUser: async (_, { name, email, age, phoneNumber, address, role, referralCode }, { token }) => {
-      if (!token) {
+    createUser: async (_, { name, email, age, phoneNumber, address, role, referralCode }, { user }) => {
+      // Проверка на наличие пользователя в контексте
+      if (!user) {
         throw new AuthenticationError('No authorization token provided');
-      }
-
-      let decoded;
-      try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-      } catch (error) {
-        throw new AuthenticationError('Invalid or expired token');
       }
 
       await client.connect();
@@ -105,8 +93,10 @@ const resolvers = {
         role: role || 'user',
         referralCode: referralCode || null,
         createdAt: new Date(),
-        createdBy: decoded.userId,
+        createdBy: user.userId, // Используем user.userId
       });
+
+      await client.close();
 
       return {
         id: result.insertedId.toString(),
