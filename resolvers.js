@@ -12,7 +12,83 @@ const resolvers = {
   },
   Mutation: {
     createUser: async (_, { name, email, age, phoneNumber, address, role, referralCode }, { token }) => {
-      // Ваша существующая логика для createUser...
+      console.log("Received data for creating user:", {
+        name, email, age, phoneNumber, address, role, referralCode
+      });
+
+      // Проверка на наличие токена
+      if (!token) {
+        throw new AuthenticationError('No authorization token provided');
+      }
+
+      // Декодирование токена
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (error) {
+        throw new AuthenticationError('Invalid or expired token');
+      }
+
+      await client.connect();
+      const db = client.db(process.env.DB_NAME);
+      const usersCollection = db.collection('users');
+
+      const newUser = {
+        name,
+        email,
+        age,
+        phoneNumber,
+        address,
+        role: role || 'user', // Значение по умолчанию
+        referralCode,
+        createdAt: new Date().toISOString(),
+        createdBy: decoded.userId, // ID создателя
+      };
+
+      try {
+        // Валидация данных
+        if (name.length < 3) {
+          throw new ApolloError('Invalid name: it must be at least 3 characters long', 'INVALID_NAME');
+        }
+
+        const emailPattern = /^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/;
+        if (!emailPattern.test(email)) {
+          throw new ApolloError('Invalid email address', 'INVALID_EMAIL');
+        }
+
+        if (age < 18 || age > 150) {
+          throw new ApolloError('Invalid age: it must be between 18 and 150', 'INVALID_AGE');
+        }
+
+        const phoneNumberPattern = /^\+\d{1,3}\d{7,10}$/;
+        if (!phoneNumberPattern.test(phoneNumber)) {
+          throw new ApolloError('Invalid phone number', 'INVALID_PHONE');
+        }
+
+        if (address.length < 10) {
+          throw new ApolloError('Invalid address: it must be at least 10 characters long', 'INVALID_ADDRESS');
+        }
+
+        if (role && !['user', 'moderator'].includes(role)) {
+          throw new ApolloError('Invalid role: it must be either "user" or "moderator"', 'INVALID_ROLE');
+        }
+
+        if (referralCode && referralCode.length !== 8) {
+          throw new ApolloError('Invalid referral code: it must be exactly 8 characters', 'INVALID_REFERRAL_CODE');
+        }
+
+        const result = await usersCollection.insertOne(newUser);
+        return {
+          id: result.insertedId.toString(),
+          ...newUser,
+          status: 'created',
+        };
+      } catch (error) {
+        console.error('Error creating user:', error);
+        throw new ApolloError('Failed to create user', 'CREATE_USER_FAILED');
+      } finally {
+        await client.close();
+      }
     },
     updateUser: async (_, { id, name, email, age, phoneNumber, address, role, referralCode }, { token }) => {
       if (!token) {

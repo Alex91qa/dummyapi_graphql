@@ -30,7 +30,7 @@ const startServer = async () => {
 
         // Логирование данных пользователя
         console.log('Пользователь верифицирован:', user);
-        return { user };
+        return { user, token }; // Добавляем токен в контекст
       } catch (err) {
         console.error('Ошибка верификации токена:', err);
         throw new AuthenticationError('Invalid/Expired token');
