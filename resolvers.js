@@ -7,48 +7,54 @@ const client = new MongoClient(process.env.MONGODB_URI);
 const resolvers = {
   Query: {
     getUser: async (_, { id }, { token }) => {
-      console.log("Received request for user ID:", id); // Логируем запрашиваемый ID пользователя
-
+      console.log("Received request for user ID:", id);
+    
       // Проверка на наличие токена
       if (!token) {
         throw new AuthenticationError('No authorization token provided');
       }
-
+    
       let decoded;
       try {
         decoded = jwt.verify(token, process.env.JWT_SECRET);
-        console.log("Decoded Token:", decoded); // Логируем декодированный токен
+        console.log("Decoded Token:", decoded);
       } catch (error) {
         throw new AuthenticationError('Invalid or expired token');
       }
-
+    
       await client.connect();
-      console.log("Connected to MongoDB"); // Логируем подключение к БД
+      console.log("Connected to MongoDB");
       const db = client.db(process.env.DB_NAME);
       const usersCollection = db.collection('users');
-
+    
       let objectId;
       try {
         objectId = new ObjectId(id);
       } catch (e) {
         throw new ApolloError('Invalid User ID format', 'INVALID_ID');
       }
-
+    
       try {
         const user = await usersCollection.findOne({ _id: objectId });
         console.log("Fetched User:", user); // Логируем найденного пользователя
-
+    
+        // Проверяем, существует ли пользователь
         if (!user) {
+          console.warn(`User not found for ID: ${objectId}`); // Логируем предупреждение
           throw new ApolloError('User not found', 'USER_NOT_FOUND');
         }
-
-        return user;
+    
+        return {
+          ...user,
+          id: user._id.toString(), // Убедимся, что поле id возвращается корректно
+        };
       } catch (error) {
-        console.error('Error fetching user:', error); // Логируем ошибку при получении пользователя
+        console.error('Error fetching user:', error);
         throw new ApolloError('Failed to fetch user', 'FETCH_USER_FAILED');
       } finally {
-        await client.close(); // Закрываем подключение к БД
+        await client.close();
       }
+    
     },
   },
   Mutation: {
