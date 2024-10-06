@@ -18,9 +18,6 @@ const startServer = async () => {
 
       const authHeader = req.headers.authorization || '';
 
-      // Логирование заголовка Authorization
-      console.log('Authorization Header:', authHeader);
-
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
         console.error('Токен отсутствует или некорректен');
         throw new AuthenticationError('No authorization token provided');
@@ -28,9 +25,8 @@ const startServer = async () => {
       
       const token = authHeader.split(' ')[1];
       try {
-        // Использование секретного ключа из переменной окружения или резервного значения
-        const secretKey = process.env.JWT_SECRET || '3n3sU4L7n29hS/DmNLmV8W+KyTwNRq5xXrJzT8xKXHg=';
-        const user = jwt.verify(token, secretKey);
+        // Использование секретного ключа из переменной окружения
+        const user = jwt.verify(token, process.env.JWT_SECRET);
 
         // Логирование данных пользователя
         console.log('Пользователь верифицирован:', user);
