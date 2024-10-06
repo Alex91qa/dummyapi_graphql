@@ -1,23 +1,6 @@
-// schema.js
 const { gql } = require('apollo-server-express');
 
 const typeDefs = gql`
-  type Query {
-    hello: String
-  }
-
-  type Mutation {
-    createUser(
-      name: String!,
-      email: String!,
-      age: Int!,
-      phoneNumber: String!,
-      address: String!,
-      role: String,
-      referralCode: String
-    ): User
-  }
-
   type User {
     id: ID!
     name: String!
@@ -25,9 +8,26 @@ const typeDefs = gql`
     age: Int!
     phoneNumber: String!
     address: String!
-    role: String
+    role: String!
     referralCode: String
-    status: String
+    createdAt: String
+    createdBy: String
+  }
+
+  type Query {
+    getUser(id: ID!): User
+  }
+
+  type Mutation {
+    createUser(
+      name: String!
+      email: String!
+      age: Int!
+      phoneNumber: String!
+      address: String!
+      role: String
+      referralCode: String
+    ): User
   }
 `;
 

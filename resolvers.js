@@ -1,15 +1,67 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 const { ApolloError, AuthenticationError } = require('apollo-server-express');
 
 const client = new MongoClient(process.env.MONGODB_URI);
 
 const resolvers = {
-  Mutation: {
-    createUser: async (_, { name, email, age, phoneNumber, address, role, referralCode }, { user }) => {
-      // Проверка на наличие пользователя в контексте
-      if (!user) {
+  Query: {
+    getUser: async (_, { id }, { token }) => {
+      if (!token) {
         throw new AuthenticationError('No authorization token provided');
+      }
+
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (error) {
+        throw new AuthenticationError('Invalid or expired token');
+      }
+
+      await client.connect();
+      const db = client.db(process.env.DB_NAME);
+      const usersCollection = db.collection('users');
+
+      let objectId;
+      try {
+        objectId = new ObjectId(id);
+      } catch (e) {
+        throw new ApolloError('Invalid User ID format', 'INVALID_ID');
+      }
+
+      const user = await usersCollection.findOne({ _id: objectId });
+
+      if (!user) {
+        throw new ApolloError('User not found', 'USER_NOT_FOUND');
+      }
+
+      await client.close();
+
+      return {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        age: user.age,
+        phoneNumber: user.phoneNumber,
+        address: user.address,
+        role: user.role,
+        referralCode: user.referralCode,
+        createdAt: user.createdAt,
+        createdBy: user.createdBy,
+      };
+    },
+  },
+  Mutation: {
+    createUser: async (_, { name, email, age, phoneNumber, address, role, referralCode }, { token }) => {
+      if (!token) {
+        throw new AuthenticationError('No authorization token provided');
+      }
+
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (error) {
+        throw new AuthenticationError('Invalid or expired token');
       }
 
       await client.connect();
@@ -39,13 +91,11 @@ const resolvers = {
         throw new ApolloError('Invalid address: it must be at least 10 characters long', 'INVALID_ADDRESS');
       }
 
-      // Проверка существующего пользователя
       const existingUser = await usersCollection.findOne({ email });
       if (existingUser) {
         throw new ApolloError('User with this email already exists', 'USER_EXISTS');
       }
 
-      // Вставка нового пользователя
       const result = await usersCollection.insertOne({
         name,
         email,
@@ -55,20 +105,7 @@ const resolvers = {
         role: role || 'user',
         referralCode: referralCode || null,
         createdAt: new Date(),
-        createdBy: user.userId, // данные о создателе
-        status: 'created',
-      });
-
-      console.log('Пользователь создан:', {
-        id: result.insertedId.toString(),
-        name,
-        email,
-        age,
-        phoneNumber,
-        address,
-        role: role || 'user',
-        referralCode: referralCode || null,
-        status: 'created',
+        createdBy: decoded.userId,
       });
 
       return {
@@ -80,7 +117,6 @@ const resolvers = {
         address,
         role: role || 'user',
         referralCode: referralCode || null,
-        status: 'created',
       };
     },
   },
