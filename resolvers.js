@@ -55,9 +55,6 @@ const resolvers = {
       } finally {
         await client.close();
       }
-    
-    
-    
     },
   },
   Mutation: {
@@ -243,6 +240,50 @@ const resolvers = {
         ...updateFields,
         status: 'updated'
       };
+    },
+
+    deleteUser: async (_, { id }, { token }) => {
+      console.log("Received request to delete user ID:", id);
+
+      if (!token) {
+        throw new AuthenticationError('No authorization token provided');
+      }
+
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (error) {
+        throw new AuthenticationError('Invalid or expired token');
+      }
+
+      await client.connect();
+      const db = client.db(process.env.DB_NAME);
+      const usersCollection = db.collection('users');
+
+      let objectId;
+      try {
+        objectId = new ObjectId(id);
+      } catch (e) {
+        throw new ApolloError('Invalid User ID format', 'INVALID_ID');
+      }
+
+      try {
+        const result = await usersCollection.deleteOne({ _id: objectId });
+
+        if (result.deletedCount === 0) {
+          throw new ApolloError('User not found', 'USER_NOT_FOUND');
+        }
+
+        return {
+          id: objectId.toString(),
+          status: 'deleted',
+        };
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        throw new ApolloError('Failed to delete user', 'DELETE_USER_FAILED');
+      } finally {
+        await client.close();
+      }
     },
   },
 };

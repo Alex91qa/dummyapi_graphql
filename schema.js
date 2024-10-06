@@ -12,7 +12,7 @@ const typeDefs = gql`
     referralCode: String
     createdAt: String
     createdBy: String
-    status: String  # Добавляем поле status
+    status: String
   }
 
   type Query {
@@ -40,6 +40,8 @@ const typeDefs = gql`
       role: String
       referralCode: String
     ): User
+    
+    deleteUser(id: ID!): User # Добавляем новый тип для удаления пользователя
   }
 `;
 
