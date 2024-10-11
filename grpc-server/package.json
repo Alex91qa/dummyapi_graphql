@@ -1,0 +1,13 @@
+{
+  "name": "grpc-user-service",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.4.4",
+    "@grpc/proto-loader": "^0.6.10",
+    "express": "^4.18.2"
+  }
+}
